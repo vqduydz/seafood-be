@@ -1,0 +1,43 @@
+{
+  "development": {
+    "username": "sa",
+    "password": "123456",
+    "database": "seafood-nextjs-mui",
+    "host": "localhost",
+    "dialect": "mssql",
+    "timezone": "+07:00",
+    "logging": false,
+    "dialectOptions": {
+      "options": {
+        "encrypt": true
+      }
+    }
+  },
+
+  "test": {
+    "username": "sa",
+    "password": "123456",
+    "database": "seafood-nextjs-mui",
+    "host": "localhost",
+    "dialect": "mssql",
+    "timezone": "+07:00",
+    "dialectOptions": {
+      "options": {
+        "encrypt": true
+      }
+    }
+  },
+  "production": {
+    "username": "sa",
+    "password": "123456",
+    "database": "seafood-nextjs-mui",
+    "host": "localhost",
+    "dialect": "mssql",
+    "timezone": "+07:00",
+    "dialectOptions": {
+      "options": {
+        "encrypt": true
+      }
+    }
+  }
+}

@@ -33,6 +33,7 @@ const createFeedback = async (req, res) => {
 const getFeedback = async (req, res) => {
   try {
     const { feedback_code, menu_id } = req.query;
+
     if (feedback_code) {
       const feedback = await Feedback.findOne({ where: { feedback_code } });
       if (!feedback) return res.status(200).json({ feedbacked: false });
@@ -40,7 +41,8 @@ const getFeedback = async (req, res) => {
     }
     if (menu_id) {
       const feedbacks = await Feedback.findAll({ where: { menu_id }, order: [['id', 'DESC']] });
-      if (!feedbacks) return res.status(200).json([]);
+      console.log(feedbacks);
+      if (!feedbacks.length) return res.status(200).json([]);
       // Lấy danh sách customer_id của các feedbacks
       const feedbacksUserID = feedbacks.map((feedback) => feedback.customer_id);
 

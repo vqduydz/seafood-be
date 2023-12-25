@@ -45,36 +45,30 @@ const getToken = async (req, res) => {
 
 const handleLogin = async (req, res) => {
   const { id } = req.user;
-  const user = await User.findOne({ where: { id }, attributes: { exclude: ['password'] } });
+  const user = await User.findOne({
+    where: { id },
+    attributes: { exclude: ['password', 'token', 'tokenExpires', 'updatedAt'] },
+    raw: true,
+  });
   const currentUser = jwt.sign(
     {
-      id: user.id,
-      role: user.role,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      gender: user.gender,
-      place: user.place,
-      avatar: user.avatar,
-      birthday: user.birthday,
-      position: user.position,
+      ...user,
     },
     process.env.JWT_SECRET,
   );
-  return res.status(200).json({ currentUser, message: 'login successfully' });
+  return res.status(200).json(currentUser);
 };
 
 const createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role, phoneNumber, gender, place, avatar } = req.body;
+    const { email, password, name, role, phoneNumber, gender, place, avatar } = req.body;
 
     // Tìm kiếm user trong database
     const user = await User.findOne({ where: { email } });
 
     // Kiểm tra xem email của user có tồn tại không
     if (user) {
-      return res.status(422).json({ errorMessage: 'Email already exists' });
+      return res.status(200).json({ error: 'Email đã tồn tại' });
     }
 
     // hash password
@@ -83,9 +77,8 @@ const createUser = async (req, res) => {
     await User.create({
       email,
       password: hashPass,
-      firstName,
-      lastName,
-      role,
+      name,
+      role: role ? role : 'Customer',
       phoneNumber,
       gender,
       place,

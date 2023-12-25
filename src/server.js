@@ -1,12 +1,14 @@
+import bcrypt from 'bcryptjs';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import Sequelize from 'sequelize';
-import { initWebRoutes } from './routes/web';
 import http from 'http';
+import jwt from 'jsonwebtoken';
+import Sequelize from 'sequelize';
 import socketIo from 'socket.io';
 import db from './models';
+import { initWebRoutes } from './routes/web';
 
 const User = db.User;
 dotenv.config();
@@ -42,7 +44,7 @@ io.setMaxListeners(15);
 // handle socket connection
 
 io.on('connection', (socket) => {
-  // console.log(`Socket connected: ${socket.id}`);
+  console.log(`Socket connected: ${socket.id}`);
 
   socket.on('deleteUser', (userId) => {
     socket.broadcast.emit('logoutUser', userId);
@@ -51,6 +53,40 @@ io.on('connection', (socket) => {
   socket.on('checkAvailableUser', async (userEmail) => {
     const user = await User.findOne({ where: { email: userEmail } });
     if (!user) socket.broadcast.emit('forceLogout', userEmail);
+  });
+
+  socket.on('newUser', async (userEmail) => {
+    const user = await User.findOne({ where: { email: userEmail } });
+    if (!user) socket.broadcast.emit('forceLogout', userEmail);
+  });
+
+  socket.on('getToken', async (loginInfo) => {
+    try {
+      const { email, password } = loginInfo;
+      const user = await User.findOne({ where: { email: email } });
+      if (!user) {
+        socket.broadcast.emit('sendToken', { error: 'Sai địa chỉ email' });
+        return;
+      }
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        socket.broadcast.emit('sendToken', { error: 'Sai password' });
+        return;
+      }
+
+      const token = jwt.sign(
+        {
+          id: user.id,
+          role: user.role,
+          email: user.email,
+        },
+        process.env.JWT_SECRET,
+      );
+      return socket.broadcast.emit('sendToken', token);
+    } catch (error) {
+      console.log('39---', error);
+      return res.status(500).json({ errorMessage: 'Server error' });
+    }
   });
 });
 

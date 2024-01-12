@@ -130,7 +130,7 @@ export const initWebRoutes = (app) => {
   //_______cart item_______________________________________
   /// cart item
   // get
-  router.get('/cartitem/:customer_id', cartItemController.getCartItemByCartId);
+  router.get('/cartitem/:customer_id', cartItemController.getCartItemByCustomerId);
   // update
   router.patch('/cartitem', cartItemController.updateCartItemById);
   // delete

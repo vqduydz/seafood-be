@@ -49,16 +49,10 @@ module.exports = {
       items: {
         type: Sequelize.TEXT,
       },
-      table_id: {
-        type: Sequelize.STRING,
-      },
       history: {
         type: Sequelize.TEXT,
       },
-      receiver: {
-        type: Sequelize.TEXT,
-      },
-      orderer: {
+      place: {
         type: Sequelize.TEXT,
       },
       note: {

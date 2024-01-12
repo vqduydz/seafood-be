@@ -18,7 +18,7 @@ const createFeedback = async (req, res) => {
 
     // Kiểm tra xem email của Feedback có tồn tại không
     if (feedback) {
-      return res.status(422).json({ errorMessage: 'Feedback already exists' });
+      return res.status(200).json({ error: 'Feedback already exists' });
     }
 
     await Feedback.create({ point, feedback_content, feedback_code, menu_id, customer_id });
@@ -40,8 +40,7 @@ const getFeedback = async (req, res) => {
       return res.status(200).json({ feedbacked: true });
     }
     if (menu_id) {
-      const feedbacks = await Feedback.findAll({ where: { menu_id }, order: [['id', 'DESC']] });
-      console.log(feedbacks);
+      const feedbacks = await Feedback.findAll({ where: { menu_id }, order: [['id', 'DESC']], raw: true });
       if (!feedbacks.length) return res.status(200).json([]);
       // Lấy danh sách customer_id của các feedbacks
       const feedbacksUserID = feedbacks.map((feedback) => feedback.customer_id);
@@ -49,13 +48,14 @@ const getFeedback = async (req, res) => {
       const users = await User.findAll({
         where: { id: feedbacksUserID },
         order: [['id', 'ASC']],
-        attributes: ['id', 'firstName', 'lastName', 'avatar'],
+        attributes: ['id', 'name', 'avatar'],
         raw: true,
       });
+      console.log({ feedbacks, feedbacksUserID, users });
 
       const feedbacksWithUser = feedbacks.map((feedback) => {
         const feedbackUsers = users.filter((user) => user.id === feedback.customer_id);
-        const data = { ...feedback.toJSON(), ...feedbackUsers[0] };
+        const data = { ...feedback, ...feedbackUsers[0] };
         return data;
       });
 

@@ -14,7 +14,7 @@ const createNewOrder = async (req, res) => {
     });
 
     if (order) {
-      return res.status(442).json({ errorMessage: 'Order already exists' });
+      return res.status(200).json({ error: 'Order already exists' });
     }
 
     await Order.create(req.body);
@@ -133,20 +133,24 @@ const getOrderByOrderCode = async (req, res) => {
       raw: true,
     });
 
-    let deliver = {},
-      handler = {};
+    let deliver, handler;
     if (order) {
       const { deliver_id, handler_id } = order;
-      handler = await User.findOne({
-        where: { id: handler_id },
-        attributes: ['id', 'firstName', 'lastName', 'avatar', 'phoneNumber'],
-        raw: true,
-      });
-      deliver = await User.findOne({
-        where: { id: deliver_id },
-        attributes: ['id', 'firstName', 'lastName', 'avatar', 'phoneNumber'],
-        raw: true,
-      });
+      if (deliver_id)
+        handler = await User.findOne({
+          where: { id: handler_id },
+          attributes: ['id', 'firstName', 'lastName', 'avatar', 'phoneNumber'],
+          raw: true,
+        });
+      else handler = null;
+
+      if (handler_id)
+        deliver = await User.findOne({
+          where: { id: deliver_id },
+          attributes: ['id', 'firstName', 'lastName', 'avatar', 'phoneNumber'],
+          raw: true,
+        });
+      else deliver = null;
     }
 
     return res.status(200).json({ ...order, deliver, handler });

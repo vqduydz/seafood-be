@@ -63,17 +63,18 @@ io.on('connection', (socket) => {
   socket.on('getToken', async (loginInfo) => {
     try {
       const { email, password } = loginInfo;
-      const user = await User.findOne({ where: { email: email } });
+      console.log({ email });
+      const user = await User.findOne({ where: { email: email }, raw: true });
       if (!user) {
-        socket.broadcast.emit('sendToken', { error: 'Sai địa chỉ email' });
+        socket.emit('getToken', { error: 'Sai địa chỉ email' });
         return;
       }
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (!passwordMatch) {
-        socket.broadcast.emit('sendToken', { error: 'Sai password' });
+        socket.emit('getToken', { error: 'Sai password' });
         return;
       }
-
+      console.log(`Socket connected: ${socket.id}`);
       const token = jwt.sign(
         {
           id: user.id,
@@ -82,9 +83,9 @@ io.on('connection', (socket) => {
         },
         process.env.JWT_SECRET,
       );
-      return socket.broadcast.emit('sendToken', token);
+      return socket.emit('getToken', token);
     } catch (error) {
-      console.log('39---', error);
+      console.log('88---', error);
       return res.status(500).json({ errorMessage: 'Server error' });
     }
   });

@@ -17,7 +17,6 @@ module.exports = (sequelize, DataTypes) => {
       order_code: DataTypes.STRING,
       customer_id: DataTypes.INTEGER,
       type: DataTypes.INTEGER,
-      table_id: DataTypes.STRING,
       status: DataTypes.STRING,
       payment: DataTypes.INTEGER,
       deposit_amount: DataTypes.INTEGER,
@@ -26,8 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       total_payment: DataTypes.INTEGER,
       items: DataTypes.TEXT,
       history: DataTypes.TEXT,
-      receiver: DataTypes.TEXT,
-      orderer: DataTypes.TEXT,
+      place: DataTypes.TEXT,
       note: DataTypes.TEXT,
     },
     {

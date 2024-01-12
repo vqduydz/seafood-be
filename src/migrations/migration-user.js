@@ -28,11 +28,8 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      address: {
+      place: {
         type: Sequelize.TEXT,
-      },
-      location: {
-        type: Sequelize.STRING,
       },
       avatar: {
         type: Sequelize.STRING,

@@ -5,14 +5,14 @@ dotenv.config();
 const CartItem = db.CartItem;
 const Menu = db.Menu;
 
-const getCartItemByCartId = async (req, res) => {
+const getCartItemByCustomerId = async (req, res) => {
   const { customer_id } = req.params;
   try {
     const cartItems = await CartItem.findAll({
       where: { customer_id },
-
       attributes: ['id', 'customer_id', 'menu_id', 'quantity'],
       order: [['createdAt', 'ASC']],
+      raw: true,
     });
 
     const imagePath = req.protocol + '://' + req.get('host') + '/v1/api/images/';
@@ -26,14 +26,30 @@ const getCartItemByCartId = async (req, res) => {
         id: cartItem_menu_id,
       },
       raw: true,
-      attributes: ['id', 'name', 'slug', 'catalog', 'catalogSlug', 'price', 'unit', 'image_url', 'max_order'],
+      attributes: ['id', 'name', 'slug', 'catalog', 'catalogSlug', 'price', 'unit', 'image', 'max_order'],
       order: [['id', 'ASC']],
     });
 
     const cartItemsWithMenu = cartItems.map((cartItem) => {
       const catalogMenus = menus.filter((menu) => menu.id === cartItem.menu_id);
-      const { image_url, ...catalogMenu } = catalogMenus[0];
-      return { ...cartItem.toJSON(), menu: { ...catalogMenu, image: imagePath + image_url } };
+      const { image, ...catalogMenu } = catalogMenus[0];
+
+      const cartItems = {
+        id: cartItem.id,
+        customer_id: cartItem.customer_id,
+        menu_id: cartItem.menu_id,
+        quantity: cartItem.quantity,
+        name: catalogMenu.name,
+        slug: catalogMenu.slug,
+        catalog: catalogMenu.catalog,
+        catalogSlug: catalogMenu.catalogSlug,
+        price: catalogMenu.price,
+        unit: catalogMenu.unit,
+        max_order: catalogMenu.max_order,
+        image: imagePath + image,
+      };
+
+      return { ...cartItems };
     });
 
     return res.status(200).json(cartItemsWithMenu);
@@ -79,23 +95,23 @@ const deleteCartItemById = async (req, res) => {
 };
 
 const addCartItem = async (req, res) => {
-  const { customer_id, menu_id, quantity, selected } = req.body;
+  const { customer_id, menu_id, quantity } = req.body;
   try {
     const cartItem = await CartItem.findOne({
       where: { menu_id, customer_id },
     });
     if (cartItem) {
-      return res.status(442).json({ errorMessage: 'CartItem already exists' });
+      return res.status(200).json({ error: 'CartItem already exists' });
     }
     await CartItem.create({
       customer_id,
       menu_id,
-      quantity,
+      quantity: quantity ? quantity : 1,
     });
-    return res.status(200).json({ cartItem, message: 'CartItem added successfully' });
+    return res.status(200).json({ message: 'CartItem added successfully' });
   } catch (error) {
     return res.status(500).json({ errorMessage: 'Server error' });
   }
 };
 
-export default { updateCartItemById, getCartItemByCartId, deleteCartItemById, addCartItem };
+export default { updateCartItemById, getCartItemByCustomerId, deleteCartItemById, addCartItem };

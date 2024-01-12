@@ -50,13 +50,13 @@ const handleLogin = async (req, res) => {
     attributes: { exclude: ['password', 'token', 'tokenExpires', 'updatedAt'] },
     raw: true,
   });
-  const currentUser = jwt.sign(
+  const currentUserToken = jwt.sign(
     {
       ...user,
     },
     process.env.JWT_SECRET,
   );
-  return res.status(200).json(currentUser);
+  return res.status(200).json(currentUserToken);
 };
 
 const createUser = async (req, res) => {
@@ -98,7 +98,7 @@ const forgotPassword = async (req, res) => {
     // check if user exists
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(404).json({ errorMessage: 'Invalid email' });
+      return res.status(200).json({ error: 'Email không hợp lệ hoặc chưa được đăng ký' });
     }
 
     // generate token and save it to user's resetToken field
@@ -116,7 +116,7 @@ const forgotPassword = async (req, res) => {
       },
     });
 
-    const resetPasswordLink = `${req.headers.referer}reset-password/${token}`;
+    const resetPasswordLink = `${req.headers.referer}reset-password?token=${token}`;
 
     const mailOptions = {
       from: process.env.EMAIL_ADDRESS,
@@ -129,7 +129,9 @@ const forgotPassword = async (req, res) => {
       if (error) {
         return res.status(500).json({ errorMessage: 'Failed to send email' });
       } else {
-        return res.status(200).json({ message: `An email has been sent to ${user.email} with further instructions.` });
+        return res.status(200).json({
+          message: `Vui lòng kiểm tra địa chỉ email ${user.email} và làm theo hướng dẫn để đặt lại mật khẩu.`,
+        });
       }
     });
   } catch (error) {
@@ -144,20 +146,23 @@ const resetPassword = async (req, res) => {
     const { email } = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(404).json({ errorMessage: 'Invalid email' });
+      return res.status(200).json({ error: 'Email không hợp lệ' });
     }
 
     if (user.token !== token || !user.tokenExpires || user.tokenExpires <= new Date()) {
-      return res.status(400).json({ errorMessage: 'Invalid or expired token' });
+      return res.status(200).json({
+        error: 'Liên kết không hợp lệ hoặc đã hết hạn.',
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, salt);
     const dataUpdate = { password: hashedPassword, token: null, tokenExpires: null };
     await user.set(dataUpdate);
     await user.save();
-    res.status(200).json({ message: 'Password reset successfully' });
+    res.status(200).json({ message: 'Đặt lại mật khẩu thành công' });
   } catch (error) {
-    return res.status(400).json({ errorMessage: 'Invalid or expired token' });
+    console.log('160---', error);
+    return res.status(400).json({ errorMessage: 'Liên kết không hợp lệ hoặc đã hết hạn.' });
   }
 };
 
@@ -294,7 +299,7 @@ const updateUserById = async (req, res) => {
     await user.save();
     return res.status(200).json({ message: 'User updated successfully' });
   } catch (error) {
-    console.log({ error });
+    console.log('303----', error);
     return res.status(500).json({ errorMessage: 'Server error' });
   }
 };

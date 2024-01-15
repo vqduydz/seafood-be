@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { unlink } from 'node:fs/promises';
+const fs = require('fs');
 import path from 'path';
 import { renameImg } from '../feature/renameImg';
 import db from '../models';
@@ -11,17 +12,17 @@ const Menu = db.Menu;
 
 const createCatalog = async (req, res) => {
   try {
-    const { name, slug, image_url } = req.body;
+    const { name, slug, image } = req.body;
     const catalog = await Catalog.findOne({ where: { slug } });
     if (catalog) {
-      return res.status(422).json({ errorMessage: 'Catalog already exists' });
+      return res.status(200).json({ error: 'Catalog already exists' });
     }
     await Catalog.create({
       name,
       slug,
-      image_url,
+      image,
     });
-    return res.status(200).json({ message: 'Catalog created successfully' });
+    return res.status(200).json('Catalog created successfully');
   } catch (error) {
     console.log('33___', error);
     return res.status(500).json({ error, errorMessage: 'Server error' });
@@ -103,6 +104,8 @@ const updateCatalogById = async (req, res) => {
     if (!catalog) {
       return res.status(404).json({ errorMessage: 'Catalog does not exist' });
     }
+
+    console.log(107, dataUpdate);
     const { id, ...data } = dataUpdate;
     if (dataUpdate.name !== catalog.name) {
       const menus = await Menu.findAll({ where: { catalog: catalog.name } });
@@ -113,21 +116,26 @@ const updateCatalogById = async (req, res) => {
         await menu.set(newMenuData);
         await menu.save();
       });
-
-      renameImg(catalog.image_url, dataUpdate.image_url).then(async (result) => {
+      if (dataUpdate.image) {
+        const result = await renameImg(catalog.image, dataUpdate.image);
         if (!result) {
-          return res.status(500).json({ message: 'Error renaming' });
+          return res.status(200).json({ error: 'Error renaming' });
         }
         await catalog.set(data);
         await catalog.save();
-        return res.status(200).json({ message: 'Catalog updated successfully' });
-      });
+        return res.status(200).json('images updated, Catalog updated successfully');
+      }
+
+      await catalog.set(data);
+      await catalog.save();
+      return res.status(200).json('Catalog updated successfully');
     } else {
       await catalog.set(data);
       await catalog.save();
-      return res.status(200).json({ message: 'Catalog updated successfully' });
+      return res.status(200).json('Catalog updated successfully');
     }
   } catch (error) {
+    console.log(131, error);
     return res.status(500).json({ errorMessage: 'Server error' });
   }
 };
@@ -137,13 +145,23 @@ const deleteCatalogById = async (req, res) => {
     const { id } = req.body;
     const catalog = await Catalog.findOne({ where: { id } });
     if (!catalog) {
-      return res.status(404).json({ errorMessage: 'Catalog does not exist' });
+      return res.status(200).json({ error: 'Catalog does not exist' });
     }
-    const imagePath = path.join(__dirname, '../../uploads', catalog.image_url);
-    await unlink(imagePath);
+    const imagePath = path.join(__dirname, '../../uploads', catalog.image);
     await catalog.destroy();
-    return res.status(200).json({
-      message: 'images deleted, Menu deleted successfully',
+
+    fs.access(imagePath, fs.constants.F_OK, (err) => {
+      if (err) {
+        return res.status(200).json('Không có hình ảnh, xóa catalog thành công.');
+      } else {
+        fs.unlink(imagePath, (unlinkErr) => {
+          if (unlinkErr) {
+            return res.status(200).json('Không thể xóa hình ảnh, xóa catalog thành công');
+          } else {
+            return res.status(200).json('Xóa hình ảnh, xóa catalog thành công');
+          }
+        });
+      }
     });
   } catch (error) {
     console.log('113---', error);
@@ -165,7 +183,7 @@ const importCatalogs = async (req, res) => {
     const newData = data.filter((row) => !existingSlugSet.has(row.slug));
     Catalog.bulkCreate(newData)
       .then(() => {
-        res.status(200).json({ message: 'Import successful' });
+        res.status(200).json('Import successful');
       })
       .catch((error) => {
         console.error('Import failed:', error);

@@ -85,7 +85,7 @@ const createUser = async (req, res) => {
       avatar,
     });
 
-    return res.status(200).json({ message: 'User created successfully' });
+    return res.status(200).json('Tạo mới thành công!');
   } catch (error) {
     console.log('104----,', error);
     return res.status(500).json({ errorMessage: 'Server error' });
@@ -289,13 +289,17 @@ const getUser = async (req, res) => {
 
 const updateUserById = async (req, res) => {
   const dataUpdate = req.body;
+  console.log('292', dataUpdate);
   try {
     const user = await User.findOne({ where: { id: dataUpdate.id } });
     if (!user) {
       return res.status(404).json({ errorMessage: 'User does not exist' });
     }
-    const { id, ...data } = dataUpdate;
-    await user.set(data);
+    const { id, password, ...data } = dataUpdate;
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, salt);
+      await user.set({ ...data, password: hashedPassword });
+    } else await user.set(data);
     await user.save();
     return res.status(200).json({ message: 'User updated successfully' });
   } catch (error) {
@@ -323,7 +327,7 @@ const importUsers = async (req, res) => {
     const file = req.file;
     // Kiểm tra nếu không có file hoặc file không đúng định dạng
     if (!file) {
-      return res.status(400).json({ error: 'Invalid file' });
+      return res.status(200).json({ error: 'Invalid file' });
     }
     // Đọc dữ liệu từ file Excel
     const workbook = xlsx.read(file.buffer, { type: 'buffer' });

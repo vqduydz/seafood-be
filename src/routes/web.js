@@ -41,12 +41,17 @@ export const initWebRoutes = (app) => {
 
   //________user______________________________________
   // get user
-  router.get('/user', verifyToken, checkRole(['Root', 'Admin', 'UserManage', 'Customer']), userController.getUser);
+  router.get(
+    '/user',
+    verifyToken,
+    checkRole(['Root', 'Admin', 'UserManage', 'Manage', 'Customer']),
+    userController.getUser,
+  );
   // update user data
   router.patch(
     '/user',
     verifyToken,
-    checkRole(['Customer', 'Root', 'Admin', 'UserManage']),
+    checkRole(['Customer', 'Root', 'Admin', 'UserManage', 'Manage']),
     userController.updateUserById,
   );
   // delete user
@@ -54,14 +59,14 @@ export const initWebRoutes = (app) => {
   router.delete(
     '/user',
     verifyToken,
-    checkRole(['Customer', 'Root', 'Admin', 'UserManage']),
+    checkRole(['Customer', 'Root', 'Admin', 'UserManage', 'Manage']),
     userController.deleteUserById,
   );
   // import user
   router.post(
     '/user/import',
     verifyToken,
-    checkRole(['Root', 'Admin', 'UserManage']),
+    checkRole(['Root', 'Admin', 'UserManage', 'Manage']),
     upload.single('file'),
     userController.importUsers,
   );

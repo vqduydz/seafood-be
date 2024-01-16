@@ -51,7 +51,6 @@ const getFeedback = async (req, res) => {
         attributes: ['id', 'name', 'avatar'],
         raw: true,
       });
-      console.log({ feedbacks, feedbacksUserID, users });
 
       const feedbacksWithUser = feedbacks.map((feedback) => {
         const feedbackUsers = users.filter((user) => user.id === feedback.customer_id);

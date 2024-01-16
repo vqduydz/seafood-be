@@ -1,9 +1,8 @@
 import dotenv from 'dotenv';
-import { unlink } from 'node:fs/promises';
-const fs = require('fs');
 import path from 'path';
 import { renameImg } from '../feature/renameImg';
 import db from '../models';
+const fs = require('fs');
 const { Op } = require('sequelize');
 const xlsx = require('xlsx');
 dotenv.config();
@@ -104,36 +103,55 @@ const updateCatalogById = async (req, res) => {
     if (!catalog) {
       return res.status(404).json({ errorMessage: 'Catalog does not exist' });
     }
-
-    console.log(107, dataUpdate);
+    const oldCatalogName = catalog.name;
+    const oldSlug = catalog.slug;
+    const oldImage = catalog.image;
     const { id, ...data } = dataUpdate;
-    if (dataUpdate.name !== catalog.name) {
-      const menus = await Menu.findAll({ where: { catalog: catalog.name } });
+    const newSlug = data.slug;
+    await catalog.set({ ...data, image: `${newSlug}.png` });
+    await catalog.save();
+    const imagePath = path.join(__dirname, '../../uploads', oldImage);
+
+    const updateCatalogForMenu = async () => {
+      const menus = await Menu.findAll({ where: { catalog: oldCatalogName } });
       menus.forEach(async (m) => {
         const { id, data } = m;
         const menu = await Menu.findOne({ where: { id } });
-        const newMenuData = { ...data, catalog: dataUpdate.name, catalogSlug: dataUpdate.slug };
+        const newMenuData = { ...data, catalog: dataUpdate.name, catalogSlug: newSlug };
         await menu.set(newMenuData);
         await menu.save();
       });
-      if (dataUpdate.image) {
-        const result = await renameImg(catalog.image, dataUpdate.image);
-        if (!result) {
-          return res.status(200).json({ error: 'Error renaming' });
-        }
-        await catalog.set(data);
-        await catalog.save();
-        return res.status(200).json('images updated, Catalog updated successfully');
-      }
+    };
 
-      await catalog.set(data);
-      await catalog.save();
-      return res.status(200).json('Catalog updated successfully');
-    } else {
-      await catalog.set(data);
-      await catalog.save();
-      return res.status(200).json('Catalog updated successfully');
-    }
+    if (!dataUpdate.image && oldSlug !== data.slug) {
+      await updateCatalogForMenu();
+      fs.access(imagePath, fs.constants.F_OK, async (err) => {
+        if (err) {
+          return res.status(200).json('Không có hình ảnh, catalog updated successfully.');
+        } else {
+          const result = await renameImg(oldImage, `${newSlug}.png`);
+          if (!result) {
+            return res.status(200).json('Không thể đổi tên hình ảnh, catalog updated successfully');
+          }
+          return res.status(200).json('imageName, catalog updated successfully');
+        }
+      });
+    } else if (dataUpdate.image && oldSlug !== data.slug) {
+      await updateCatalogForMenu();
+      fs.access(imagePath, fs.constants.F_OK, (err) => {
+        if (err) {
+          return res.status(200).json('Không có hình cũ, catalog updated successfully.');
+        } else {
+          fs.unlink(imagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              return res.status(200).json('Không thể xóa hình ảnh, catalog updated successfully');
+            } else {
+              return res.status(200).json('image, catalog updated successfully');
+            }
+          });
+        }
+      });
+    } else return res.status(200).json('image, catalog updated successfully');
   } catch (error) {
     console.log(131, error);
     return res.status(500).json({ errorMessage: 'Server error' });

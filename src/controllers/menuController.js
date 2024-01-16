@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import { unlink } from 'node:fs/promises';
 import path from 'path';
 import { renameImg } from '../feature/renameImg';
 import db from '../models';
@@ -8,13 +7,14 @@ const fs = require('fs');
 const xlsx = require('xlsx');
 dotenv.config();
 const Menu = db.Menu;
+const CartItem = db.CartItem;
 
 const createMenu = async (req, res) => {
   try {
-    const { name, slug, catalog, catalogSlug, price, unit, image_url, desc } = req.body;
+    const { name, slug, catalog, catalogSlug, price, unit, image, max_order } = req.body;
     const menu = await Menu.findOne({ where: { slug } });
     if (menu) {
-      return res.status(422).json({ errorMessage: 'Menu already exists' });
+      return res.status(200).json({ error: 'Menu already exists' });
     }
     await Menu.create({
       name,
@@ -23,10 +23,10 @@ const createMenu = async (req, res) => {
       catalogSlug,
       price,
       unit,
-      image_url,
-      desc,
+      image,
+      max_order,
     });
-    return res.status(200).json({ message: 'Menu created successfully' });
+    return res.status(200).json('Menu created successfully');
   } catch (error) {
     console.log('37----,', error);
     return res.status(500).json({ errorMessage: 'Server error' });
@@ -98,23 +98,43 @@ const updateMenuById = async (req, res) => {
   try {
     const menu = await Menu.findOne({ where: { id: dataUpdate.id } });
     if (!menu) {
-      return res.status(404).json({ errorMessage: 'Menu does not exist' });
+      return res.status(200).json({ error: 'Menu does not exist' });
     }
+    const oldSlug = menu.slug;
+    const oldImage = menu.image;
     const { id, ...data } = dataUpdate;
-    if (menu.slug !== data.slug) {
-      renameImg(menu.image_url, data.image_url).then(async (result) => {
-        if (!result) {
-          return res.status(500).json({ message: 'Error renaming' });
+    const newSlug = data.slug;
+    const imagePath = path.join(__dirname, '../../uploads', oldImage);
+    await menu.set({ ...data, image: `${newSlug}.png` });
+    await menu.save();
+
+    if (!dataUpdate.image && oldSlug !== data.slug) {
+      fs.access(imagePath, fs.constants.F_OK, async (err) => {
+        if (err) {
+          return res.status(200).json('Không có hình ảnh, menu updated successfully.');
+        } else {
+          const result = await renameImg(oldImage, `${newSlug}.png`);
+          if (!result) {
+            return res.status(200).json('Không thể đổi tên hình ảnh, menu updated successfully');
+          }
+          return res.status(200).json('imageName, menu updated successfully');
         }
-        await menu.set(data);
-        await menu.save();
-        return res.status(200).json({ message: 'Menu updated successfully', menu });
       });
-    } else {
-      await menu.set(data);
-      await menu.save();
-      return res.status(200).json({ message: 'Menu updated successfully', menu });
-    }
+    } else if (dataUpdate.image && oldSlug !== data.slug) {
+      fs.access(imagePath, fs.constants.F_OK, (err) => {
+        if (err) {
+          return res.status(200).json('Không có hình cũ, menu updated successfully.');
+        } else {
+          fs.unlink(imagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              return res.status(200).json('Không thể xóa hình ảnh, menu updated successfully');
+            } else {
+              return res.status(200).json('image, menu updated successfully');
+            }
+          });
+        }
+      });
+    } else return res.status(200).json('image, menu updated successfully');
   } catch (error) {
     console.log('100---', error);
     return res.status(500).json({ errorMessage: 'Server error' });
@@ -126,13 +146,32 @@ const deleteMenuById = async (req, res) => {
     const { id } = req.body;
     const menu = await Menu.findOne({ where: { id } });
     if (!menu) {
-      return res.status(404).json({ errorMessage: 'Menu does not exist' });
+      return res.status(200).json({ error: 'Menu does not exist' });
     }
-    const imagePath = path.join(__dirname, '../../uploads', menu.image_url);
-    await unlink(imagePath);
+
+    const cartItems = await CartItem.findAll({
+      where: { menu_id: id },
+    });
+
+    cartItems.forEach(async (cartItem) => {
+      await cartItem.destroy();
+    });
+
+    const imagePath = path.join(__dirname, '../../uploads', menu.image);
     await menu.destroy();
-    return res.status(200).json({
-      message: 'images deleted, Menu deleted successfully',
+
+    fs.access(imagePath, fs.constants.F_OK, (err) => {
+      if (err) {
+        return res.status(200).json('Không có hình ảnh, xóa menu thành công.');
+      } else {
+        fs.unlink(imagePath, (unlinkErr) => {
+          if (unlinkErr) {
+            return res.status(200).json('Không thể xóa hình ảnh, xóa menu thành công');
+          } else {
+            return res.status(200).json('Xóa hình ảnh, xóa menu thành công');
+          }
+        });
+      }
     });
   } catch (error) {
     return res.status(500).json({ error, errorMessage: 'Server error' });

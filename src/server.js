@@ -63,7 +63,6 @@ io.on('connection', (socket) => {
   socket.on('getToken', async (loginInfo) => {
     try {
       const { email, password } = loginInfo;
-      console.log({ email });
       const user = await User.findOne({ where: { email: email }, raw: true });
       if (!user) {
         socket.emit('getToken', { error: 'Sai địa chỉ email' });
